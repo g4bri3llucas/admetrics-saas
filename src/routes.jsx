@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
+
 import Login from "./pages/Login"
-import Admin from "./pages/Admin"
-import Dashboard from "./pages/Dashboard"
+import Admin from "./pages/admin/Admin"
 
 export default function AppRoutes() {
   return (
@@ -9,7 +9,6 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   )
