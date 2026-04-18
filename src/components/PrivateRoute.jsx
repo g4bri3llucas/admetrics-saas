@@ -12,10 +12,10 @@ export default function PrivateRoute({ children, role }) {
     )
   }
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/" replace />  
 
   if (role && perfil?.role !== role) {
-    return <Navigate to={perfil?.role === "admin" ? "/admin" : "/dashboard"} replace />
+    return <Navigate to="/" replace />  
   }
 
   return children
