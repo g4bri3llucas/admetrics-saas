@@ -1,24 +1,48 @@
-import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-} from "firebase/firestore"
-import { db } from "./firebase"
+import { supabase } from "./supabase"
 
+// ── Get all clients ────────────────────────────────────────────────────────
 export async function getClientes() {
-  const q = query(collection(db, "users"), where("role", "==", "client"))
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("role", "client")
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return data
 }
 
-export async function editarCliente(id, dados) {
-  await updateDoc(doc(db, "users", id), dados)
+// ── Get single client by ID ────────────────────────────────────────────────
+export async function getCliente(id) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (error) throw error
+  return data
 }
 
-export async function excluirCliente(id) {
-  await deleteDoc(doc(db, "users", id))
+// ── Update client profile ──────────────────────────────────────────────────
+export async function updateCliente(id, updates) {
+  const { data, error } = await supabase
+    .from("users")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ── Delete client ──────────────────────────────────────────────────────────
+export async function deleteCliente(id) {
+  const { error } = await supabase
+    .from("users")
+    .delete()
+    .eq("id", id)
+
+  if (error) throw error
 }

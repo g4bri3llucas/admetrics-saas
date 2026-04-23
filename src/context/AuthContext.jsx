@@ -1,38 +1,59 @@
 import { createContext, useContext, useEffect, useState } from "react"
-import { onAuthStateChanged } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
-import { auth, db } from "../services/firebase"
+import { supabase } from "../services/supabase"
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [perfil, setPerfil] = useState(null)
+  const [user,       setUser]       = useState(null)
+  const [perfil,     setPerfil]     = useState(null)
   const [carregando, setCarregando] = useState(true)
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth mudou:", firebaseUser?.email ?? "deslogado")
+  // Fetch profile row from public.users
+  async function fetchPerfil(supabaseUser) {
+    if (!supabaseUser) {
+      setPerfil(null)
+      return
+    }
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", supabaseUser.id)
+        .single()
 
-      if (firebaseUser) {
-        setUser(firebaseUser)
-        try {
-          const snap = await getDoc(doc(db, "users", firebaseUser.uid))
-          console.log("Perfil encontrado:", snap.exists(), snap.data())
-          setPerfil(snap.exists() ? snap.data() : null)
-        } catch (err) {
-          console.error("Erro ao buscar perfil:", err)
-          setPerfil(null)
-        }
-      } else {
-        setUser(null)
+      if (error) {
+        console.error("Error fetching profile:", error)
         setPerfil(null)
+      } else {
+        console.log("Profile loaded:", data)
+        setPerfil(data)
       }
+    } catch (err) {
+      console.error("Unexpected error fetching profile:", err)
+      setPerfil(null)
+    }
+  }
 
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("Initial session:", session?.user?.email ?? "none")
+      setUser(session?.user ?? null)
+      await fetchPerfil(session?.user ?? null)
       setCarregando(false)
     })
 
-    return unsubscribe
+    // Listen for auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth event:", event, session?.user?.email ?? "none")
+        setUser(session?.user ?? null)
+        await fetchPerfil(session?.user ?? null)
+        setCarregando(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
   return (

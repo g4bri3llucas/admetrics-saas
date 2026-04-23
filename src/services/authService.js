@@ -1,45 +1,34 @@
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  createUserWithEmailAndPassword,
-} from "firebase/auth"
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"
-import { initializeApp, deleteApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { auth, db } from "./firebase"
+import { supabase } from "./supabase"
 
-export async function login(email, senha) {
-  const credential = await signInWithEmailAndPassword(auth, email, senha)
-  return credential.user
+// ── Login ──────────────────────────────────────────────────────────────────
+export async function login(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data.user
 }
 
+// ── Logout ─────────────────────────────────────────────────────────────────
 export async function logout() {
-  await signOut(auth)
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
 }
 
+// ── Create client (without affecting current session) ─────────────────────
 export async function criarCliente({ nome, empresa, email, senha }) {
-  const config = auth.app.options
-  const appSecundario = initializeApp(config, "criacao-cliente-" + Date.now())
-  const authSecundario = getAuth(appSecundario)
+  // 1. Create auth user via admin signup (uses anon key — Supabase allows this
+  //    when email confirmations are disabled in the project settings)
+  const { data, error } = await supabase.auth.signUp({ email, password: senha })
+  if (error) throw error
 
-  try {
-    const credential = await createUserWithEmailAndPassword(
-      authSecundario,
-      email,
-      senha
-    )
-    const uid = credential.user.uid
+  const uid = data.user?.id
+  if (!uid) throw new Error("User creation failed — no UID returned")
 
-    await setDoc(doc(db, "users", uid), {
-      nome,
-      empresa,
-      email,
-      role: "client",
-      createdAt: serverTimestamp(),
-    })
+  // 2. Insert profile row in public.users
+  const { error: profileError } = await supabase
+    .from("users")
+    .insert({ id: uid, nome, empresa, email, role: "client" })
 
-    return uid
-  } finally {
-    await deleteApp(appSecundario)
-  }
+  if (profileError) throw profileError
+
+  return uid
 }

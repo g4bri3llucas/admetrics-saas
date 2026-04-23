@@ -6,16 +6,22 @@ export default function PrivateRoute({ children, role }) {
 
   if (carregando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <span className="text-gray-400 text-sm">Carregando...</span>
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#020617",
+      }}>
+        <span style={{ color: "#475569", fontSize: "14px" }}>Loading...</span>
       </div>
     )
   }
 
-  if (!user) return <Navigate to="/" replace />  
+  if (!user) return <Navigate to="/" replace />
 
   if (role && perfil?.role !== role) {
-    return <Navigate to="/" replace />  
+    return <Navigate to="/" replace />
   }
 
   return children
